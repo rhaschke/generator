@@ -176,6 +176,13 @@
                               (:file     "aspects-build")
                               (:file     "aspects-publish")))
 
+                (:module     "model-target"
+                 :pathname   "src/model/target"
+                 :depends-on ("model" "model-variables")
+                 :serial     t
+                 :components ((:file     "package")
+                              (:file     "classes")))
+
                 (:module     "deployment"
                  :pathname   "src/deployment"
                  :depends-on ("model-project"
