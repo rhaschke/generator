@@ -105,6 +105,11 @@ target: TARGET")))
     accesses.")
 
   (:enhancement
+   "The new" (:verb "generate-dockerfile") "command writes a
+    Dockerfile that builds a distribution inside a Docker container
+    instead of generating Jenkins jobs.")
+
+  (:enhancement
    "Analysis of the CMake" (:verb "include()") "commands succeeds in
     more cases.")
 

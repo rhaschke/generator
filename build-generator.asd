@@ -208,6 +208,18 @@
                               (:file     "distribution")
                               (:file     "job")))
 
+                (:module     "deployment-dockerfile"
+                 :pathname   "src/deployment/dockerfile"
+                 :depends-on ("model"
+                              "model-project"
+                              "model-aspects"
+                              "deployment")
+                 :serial     t
+                 :components ((:file     "package")
+                              (:file     "util")
+                              (:file     "target")
+                              (:file     "aspects")))
+
                 (:module     "report"
                  :pathname   "src/report"
                  :depends-on ("util" "model-project")

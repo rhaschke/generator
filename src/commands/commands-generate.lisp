@@ -156,3 +156,13 @@
 
   (define-generate-command (:generate :jenkins) ; Backward compatibility
     . #1#))
+
+;;; Command for Dockerfile target
+
+(define-generate-command (:generate-dockerfile :dockerfile)
+  (("--output-directory" "-o") "output-directory" "DIRECTORY"             t)
+
+  (("--base-image" "-b")       "base-image"       "IMAGE-NAME[:TAG-NAME]" t)
+  (("--platform" "-p")         "platform"         "PLATFORM")
+
+  (("--run-strategy" "-s")     "run-strategy"     "STRATEGY"))
