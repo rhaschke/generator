@@ -28,8 +28,8 @@
                :reader   mode
                :initform "toolkit"
                :documentation
-               #.(format nil "The mode according to which jobs should ~
-                  be generated.~@
+               #.(format nil "The mode according to which build ~
+                  commands should be selected.~@
                   ~@
                   Selects the set of templates stored in the ~
                   templates/MODE directory."))
@@ -39,7 +39,7 @@
                :initform '()
                :documentation
                #.(format nil "Overwrite a variable after loading the ~
-                  distribution.~@
+                  distribution(s).~@
                   ~@
                   Arguments to this option have to be of the form ~
                   VARIABLE-NAME=VALUE.")))

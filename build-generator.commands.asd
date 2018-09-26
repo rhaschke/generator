@@ -78,6 +78,7 @@
                               (:file       "command-info-variables")
                               (:file       "command-info-aspects")
                               (:file       "command-generate")
+                              (:file       "commands-generate")
 
                               (:file       "command-analyze")
 
