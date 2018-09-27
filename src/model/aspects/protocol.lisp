@@ -80,8 +80,7 @@
    "Return non-nil if CONSTRAINTS mandate that the step LEFT should be
     executed before the step RIGHT."))
 
-(defgeneric extend! (aspect spec output target)
-  (:method-combination progn))
+(defgeneric extend! (aspect spec output target))
 
 ;; Default behavior
 
@@ -105,10 +104,10 @@
                     (target t))
   (write-string (extend! aspect spec 'string target) output))
 
-(defmethod extend! progn ((aspect list)
-                          (spec   t)
-                          (output jenkins.api:job/project)
-                          (target (eql :jenkins)))
+(defmethod extend! ((aspect list)
+                    (spec   t)
+                    (output jenkins.api:job/project)
+                    (target (eql :jenkins)))
   ;; Apply aspects, respecting declared ordering, and sort generated
   ;; steps (i.e. builders and publishers) according to declared
   ;; ordering.
