@@ -1,0 +1,30 @@
+* Introduction
+
+  This target generates a [[https://www.gnu.org/software/make/manual/make.html#Introduction][Makefile]] which builds, installs or tests the specified projects on the local machine without employing a CI Server or CI Service.
+  The generated Makefile has a rule for each project and dependencies between projects are expressed as dependencies between rules.
+  The build can be parallelized by invoking =make= with ~make -j NUMBER-OF-PROCESSES …~.
+
+* Noteworthy Technical Details
+
+** TODO Stamps
+
+   The generated Makefile writes "stamp" files to track already finished work.
+   This allows resuming incomplete builds but also means that certain changes such as source code changes in project repositories are not picked up.
+
+** TODO Name Mangling
+
+** ONESHELL
+
+   We emit
+
+   #+BEGIN_SRC makefile
+     .ONESHELL:
+     SHELL = /bin/bash
+     .SHELLFLAGS = -ec
+   #+END_SRC
+
+   at the top of the Makefile.
+   This causes =make= to invoke the shell such that it executes the recipe lines of each rule as a single chunk instead of one shell invocation per line (or multiple continuation lines using "\").
+   Note that we have to pass =-c= to the shell so it doesn't attempt to execute the shell code chunk as a command.
+
+** TODO Parallel Execution and Nested =make= Invocations

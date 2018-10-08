@@ -222,6 +222,18 @@
                               (:file     "output")
                               (:file     "aspects")))
 
+                (:module     "deployment-makefile"
+                 :pathname   "src/deployment/makefile"
+                 :depends-on ("model"
+                              "model-project"
+                              "model-aspects"
+                              "deployment")
+                 :serial     t
+                 :components ((:file     "package")
+                              (:file     "util")
+                              (:file     "target")
+                              (:file     "aspects")))
+
                 (:module     "report"
                  :pathname   "src/report"
                  :depends-on ("util" "model-project")
