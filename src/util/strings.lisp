@@ -6,6 +6,14 @@
 
 (cl:in-package #:build-generator.util)
 
+(defun maybe-truncate (string)
+  (let* ((string (string-left-trim '(#\Space #\Tab #\Newline) string))
+         (length (length string))
+         (end    (min (or (position #\Newline string) length) 30)))
+    (if (> length end)
+        (values (subseq string 0 end) t)
+        (values string                nil))))
+
 (defun safe-name (name)
   (substitute #\_ #\/ name))
 
