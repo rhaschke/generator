@@ -217,7 +217,9 @@
                  :serial     t
                  :components ((:file     "package")
                               (:file     "util")
-                              (:file     "target")
+                              (:file     "model")
+                              (:file     "target") ; TODO output before target?
+                              (:file     "output")
                               (:file     "aspects")))
 
                 (:module     "report"

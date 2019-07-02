@@ -15,6 +15,13 @@
                      #.(format nil "The directory into which the ~
                         Dockerfile and the associated scripts should ~
                         be written."))
+   (staging-image    :initarg  :staging-image
+                     :type     (or null string)
+                     :reader   staging-image
+                     :initform nil
+                     :documentation
+                     #.(format nil "The Docker image in which builds
+                        should be performed."))
    (base-image       :initarg  :base-image
                      :type     string
                      :reader   base-image
@@ -54,25 +61,6 @@
 (service-provider:register-provider/class
  'deploy:target :dockerfile :class 'dockerfile-target)
 
-(defun write-header-comment (stream target)
-  (declare (ignore target))
-  (deploy:print-heading stream "TODO steal from distribution release command"))
-
-(defun write-package-installation-commands (stream distribution target)
-  (let* ((platform     (platform target))
-         (requirements (project:platform-requires distribution platform))
-         (apt-command  "DEBIAN_FRONTEND=noninteractive apt-get -qq"))
-    (deploy:print-heading stream (format nil "Dependencies for platform ~{~A~^ ~}"
-                                             platform))
-    (if requirements
-        (format stream "RUN ~A update \\~@
-                        ~4T&& ~:*~A --assume-yes upgrade \\~@
-                        ~4T&& ~:*~A --assume-yes install \\~@
-                          ~6@T~{~<~T\\~%~6@T~1,:;~A~>~^ ~}~
-                          ~2%"
-                apt-command requirements)
-        (format stream "# no dependencies~2%"))))
-
 (defun write-cleanup-commands (stream)
   (deploy:print-heading stream "Cleanup")
   #+later (format stream "RUN ~%"))
@@ -81,54 +69,70 @@
   (unless (every (of-type 'project:distribution) thing)
     (return-from deploy:deploy (call-next-method)))
 
-  (let* ((deployed-things (call-next-method))
+  (let+ (((&accessors-r/o staging-image base-image run-strategy) target)
+         (deployed-things (call-next-method))
          (deployed-things (util:sort-with-partial-order
                            deployed-things (lambda (left right)
                                              (find (model:specification left)
                                                    (model:dependencies
                                                     (model:specification right))))))
-         (run-strategy    (run-strategy target))
          (dockerfile      (merge-pathnames "Dockerfile" (output-directory target))))
     (ensure-directories-exist dockerfile)
-    (with-output-to-file (stream dockerfile :if-exists :supersede)
-      ;; Header comment and base image.
-      (write-header-comment stream target)
-      (format stream "FROM ~A~2%" (base-image target))
 
-      ;; Install build and runtime dependencies.
-      (write-package-installation-commands
-       stream (first-elt thing) target)
+    (let* ((build (make-instance 'stage
+                                 :name "Build"
+                                 :base-image   staging-image
+                                 :run-strategy run-strategy
+                                 :steps        (append (list) ; install dependencies
+                                                       (list) ; prepare hook
+                                                       deployed-things)))
+           (final (make-instance 'stage
+                                 :name "Final"
+                                 :base-image   base-image
+                                 :run-strategy run-strategy
+                                 :steps        (list (make-instance 'copy
+                                                                    :from-stage build
+                                                                    :source     "/from"
+                                                                    :target     "/to"))))
+           (model (make-instance 'dockerfile :stages (list build final))))
+      (output model dockerfile))
 
-      ;; Write scripts and RUN directives for prepare hook(s).
-      (map nil (lambda (distribution) ; TODO could we get this into DEPLOYED-THINGS?
-                 (with-simple-restart
-                     (continue "~@<Skip writing RUN commands for ~A ~
+    #+no (with-output-to-file (stream dockerfile :if-exists :supersede)
+
+           ;; Install build and runtime dependencies.
+           (write-package-installation-commands
+            stream (first-elt thing) target)
+
+           ;; Write scripts and RUN directives for prepare hook(s).
+           (map nil (lambda (distribution) ; TODO could we get this into DEPLOYED-THINGS?
+                      (with-simple-restart
+                          (continue "~@<Skip writing RUN commands for ~A ~
                                 prepare hook~@:>"
-                               distribution)
-                   (when-let* ((name         (model:name distribution))
-                               (prepare-hook (var:value distribution :prepare-hook/unix nil)))
-                     (deploy:print-heading stream (format nil "~A Prepare Hook" name))
-                     (write-scripts-and-run-commands*
-                      stream target "distribution-prepare"
-                      `((,(format nil "~A-prepare-hook" name)
-                         "Prepare Hook"
-                         ,prepare-hook)))
-                     (format stream "~2%"))))
-           thing)
+                                    distribution)
+                        (when-let* ((name         (model:name distribution))
+                                    (prepare-hook (var:value distribution :prepare-hook/unix nil)))
+                          (deploy:print-heading stream (format nil "~A Prepare Hook" name))
+                          (write-scripts-and-run-commands*
+                           stream target "distribution-prepare"
+                           `((,(format nil "~A-prepare-hook" name)
+                              "Prepare Hook"
+                              ,prepare-hook)))
+                          (format stream "~2%"))))
+                thing)
 
-      ;; Write scripts and RUN directives for project builders.
-      (map nil (lambda (thing)
-                 (with-simple-restart
-                     (continue "~@<Skip writing RUN commands for ~A~@:>" thing)
-                   (deploy:print-heading stream (model:name thing))
-                   (write-scripts-and-run-commands
-                    target stream thing run-strategy)
-                   (format stream "~2%")))
-           deployed-things)
+           ;; Write scripts and RUN directives for project builders.
+           (map nil (lambda (thing)
+                      (with-simple-restart
+                          (continue "~@<Skip writing RUN commands for ~A~@:>" thing)
+                        (deploy:print-heading stream (model:name thing))
+                        (write-scripts-and-run-commands
+                         target stream thing run-strategy)
+                        (format stream "~2%")))
+                deployed-things)
 
-      ;; TODO Optionally delete workspaces
-      ;; TODO Uninstall build dependencies
-      (write-cleanup-commands stream))))
+           ;; TODO Optionally delete workspaces
+           ;; TODO Uninstall build dependencies
+           (write-cleanup-commands stream))))
 
 (defclass dockerfile-job (model:named-mixin
                           model:implementation-mixin
@@ -189,73 +193,6 @@
          (format ,stream-var "set -e~2%")
          ,@body)
        (values ,relative-var ,absolute-var))))
-
-(defun write-scripts-and-run-commands* (stream target sub-directory steps)
-  (let ((output-directory (output-directory target))
-        (script-directory (make-script-directory sub-directory))
-        (runs             '()))
-    (map nil (lambda+ ((name title command))
-               (let ((script/relative
-                       (with-output-to-script
-                           (stream name script-directory output-directory)
-                         (write-string command stream))))
-                 (appendf runs (list (list title name script/relative)))))
-         steps)
-
-    (write-copy-and-run-commands stream script-directory runs)))
-
-(defmethod write-scripts-and-run-commands ((target   t)
-                                           (stream   t)
-                                           (job      t)
-                                           (strategy (eql :one-file-per-builder)))
-  (let* ((output-directory  (output-directory target))
-         (project-directory (deploy:job-full-name (model:specification job)))
-         (script-directory  (make-script-directory project-directory))
-         (runs              '()))
-    (map nil (lambda (builder)
-               (let* ((name    (model:name (aspect builder)))
-                      (command (trim-command (deploy:command builder)))
-                      (script/relative
-                        (with-output-to-script
-                            (stream name script-directory output-directory)
-                          (write-string command stream))))
-                 (appendf runs (list (list name
-                                           project-directory
-                                           script/relative)))))
-         (builders job))
-
-    (write-copy-and-run-commands stream script-directory runs)))
-
-(defmethod write-scripts-and-run-commands ((target   t)
-                                           (stream   t)
-                                           (job      t)
-                                           (strategy (eql :one-file-for-all-builders)))
-  (let* ((output-directory  (output-directory target))
-         (project-directory (deploy:job-full-name (model:specification job)))
-         (script-directory  (make-script-directory project-directory))
-         (script/relative
-           (with-output-to-script (stream "builders" script-directory output-directory)
-             (map nil (lambda (builder)
-                        (let ((name    (model:name (aspect builder)))
-                              (command (trim-command (deploy:command builder))))
-                          (deploy:print-heading stream (format nil "Aspect ~A" name)) ; TODO should take format-control &rest format-arguments
-                          ;; Execute COMMAND in a sub-shell so that
-                          ;; e.g. changing the current directory or
-                          ;; the environment does not affect the next
-                          ;; step.
-                          ;;
-                          ;; Note that we must not indent the
-                          ;; sub-shell command string as that could
-                          ;; break HERE documents and maybe other
-                          ;; things.
-                          (format stream "(~@
-                                           ~@<~@;~A~:>~@
-                                          )~2%" command)))
-                  (builders job)))))
-
-    (write-copy-and-run-commands
-     stream script-directory
-     `(("Builders" ,project-directory ,script/relative)))))
 
 (defmethod deploy:deploy ((thing project::job) (target dockerfile-target))
   (let ((output (make-instance 'dockerfile-job
