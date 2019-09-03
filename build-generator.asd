@@ -1,6 +1,6 @@
 ;;;; build-generator.asd --- System definition for the build-generator system
 ;;;;
-;;;; Copyright (C) 2011-2019 Jan Moringen
+;;;; Copyright (C) 2011-2020 Jan Moringen
 ;;;;
 ;;;; Author: Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
 
@@ -233,6 +233,19 @@
                               (:file     "util")
                               (:file     "target")
                               (:file     "aspects")))
+
+                (:module     "deployment-build"
+                 :pathname   "src/deployment/build"
+                 :depends-on ("model"
+                              "model-project"
+                              "model-aspects"
+                              "deployment")
+                 :serial     t
+                 :components ((:file     "package")
+                              (:file     "model")
+                              (:file     "target")
+                              (:file     "aspects")
+                              (:file     "execution")))
 
                 (:module     "report"
                  :pathname   "src/report"

@@ -171,3 +171,10 @@
 
 (define-generate-command (:generate-makefile :makefile)
   (("--output-directory" "-o") "output-directory" "DIRECTORY" t))
+
+;;; Command for build target
+
+(define-generate-command (:build :build)
+  ;; (("--output-directory" "-o")  "output-directory"  "DIRECTORY"         t)
+  (("--working-directory" "-w") "working-directory"         "DIRECTORY" t)
+  ("--delete-working-directory" "delete-working-directory?" "BOOLEAN"))
