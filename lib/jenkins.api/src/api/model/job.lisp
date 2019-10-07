@@ -153,10 +153,10 @@
                         (object    job/project))
   (let+ (((local-name &optional plugin) new-value)
          (root (stp:document-element (%data object))))
-        (setf (stp:local-name root) local-name)
-        (when plugin
-          (setf (stp:attribute-value root "plugin") plugin))
-        new-value))
+    (setf (stp:local-name root) local-name)
+    (when plugin
+      (setf (stp:attribute-value root "plugin") plugin))
+    new-value))
 
 (defmethod upstream ((object job/project))
   (when-let ((reverse (trigger-of-type 'trigger/reverse object)))

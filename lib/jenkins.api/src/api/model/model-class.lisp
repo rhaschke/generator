@@ -1,6 +1,6 @@
 ;;;; model-class.lisp --- Superclass for model classes.
 ;;;;
-;;;; Copyright (C) 2012-2019 Jan Moringen
+;;;; Copyright (C) 2012-2020 Jan Moringen
 ;;;;
 ;;;; Author: Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
 
@@ -65,11 +65,14 @@
 (defmethod slot-unbound :around ((class     t)
                                  (instance  root-model-object)
                                  (slot-name t))
-  (setf (%data instance) nil)
-  (update! instance)
-  (if (slot-boundp instance slot-name)
-      (slot-value instance slot-name)
-      (call-next-method)))
+  (cond ((member slot-name '(id data get-func put-func))
+         (call-next-method))
+        (t
+         (setf (%data instance) nil)
+         (update! instance)
+         (if (slot-boundp instance slot-name)
+             (slot-value instance slot-name)
+             (call-next-method)))))
 
 (defmethod (setf closer-mop:slot-value-using-class)
     :around ((new-value t)
@@ -98,7 +101,7 @@
 
 ;;; `define-model-class' macro
 
-(defmacro define-model-class (name () (&rest slots) &body options)
+(defmacro define-model-class (name (&rest superclasses) (&rest slots) &body options)
   (let+ (((&flet maybe-version-case (spec &key (transform #'identity))
             (typecase spec
               ((cons (eql :version))
@@ -186,7 +189,8 @@
          (version-slot (second (find :version-slot options :key #'first)))
          (root?        (second (find :root? options :key #'first))))
     `(progn
-       (defclass ,name (,@(when root? '(root-model-object)))
+       (defclass ,name (,@(when root? '(root-model-object))
+                        ,@superclasses)
          (,@(mapcar #'make-slot-spec slots))
          (:default-initargs
           ,@(append
