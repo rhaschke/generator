@@ -178,3 +178,7 @@
   ;; (("--output-directory" "-o")  "output-directory"  "DIRECTORY"         t)
   (("--working-directory" "-w") "working-directory"         "DIRECTORY" t)
   ("--delete-working-directory" "delete-working-directory?" "BOOLEAN"))
+
+;;; Command for travis target
+
+(define-generate-command (:generate-travis :travis))
