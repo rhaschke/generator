@@ -72,6 +72,7 @@
 
 ;;; `jenkins-access-mixin'
 
+;; TODO unused
 (defclass jenkins-access-mixin ()
   ((base-uri  :initarg  :base-uri
               :type     puri:uri
@@ -119,5 +120,5 @@
 (defmethod command-execute :around ((command jenkins-access-mixin))
   (funcall (make-context-function command) #'call-next-method))
 
-(defmethod command-execute :before ((command jenkins-access-mixin))
+(defmethod command-execute :before ((command jenkins-access-mixin)) ; TODO missing in target-based implementation
   (as-phase (:verify-jenkins) (jenkins.api::verify-jenkins)))

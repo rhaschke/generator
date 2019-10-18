@@ -32,6 +32,7 @@
          (distributions
           (generate-analyze distributions projects
                             :generator-version (generator-version)
+                            :temp-directory    *temp-directory*
                             :cache-directory   *cache-directory*
                             :temp-directory    *temp-directory*))
          (distributions
@@ -140,3 +141,18 @@
          (("--set" "-D")  "overwrites"    "VARIABLE-NAME=VALUE")
 
          ,@option-mapping-clauses))))
+
+;;; Command for Jenkins target
+
+(progn
+  (define-generate-command (:generate-jenkins :jenkins)
+    . #1=(("--delete-other"         "delete-other?")
+          ("--delete-other-pattern" "delete-other-pattern" "REGEX")
+
+          (("--base-uri" "-b")      "base-uri"             "URI")
+          (("--username" "-u")      "username"             "LOGIN")
+          (("--password" "-p")      "password"             "PASSWORD")
+          (("--api-token" "-t" "-a") "api-token"            "API-TOKEN")))
+
+  (define-generate-command (:generate :jenkins) ; Backward compatibility
+    . #1#))
