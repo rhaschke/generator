@@ -68,6 +68,15 @@
                                     command)))
         (jenkins.api:builders job)))
 
+(defmethod extend! ((aspect aspect-cmake/unix)
+                    (spec   t)
+                    (output (eql 'string))
+                    (target (eql :command)))
+  (apply
+   (lambda (command)
+     (wrapped-shell-command (:aspect.cmake/unix) command))
+   (aspect-process-parameters aspect)))
+
 (var:define-variable :aspect.cmake/unix.find-commands list ; :write
   :documentation
   "Shell commands for finding upstream CMake packages.
@@ -214,6 +223,21 @@
                          :global-settings     (or global-settings-file :default)))
         (jenkins.api:builders job)))
 
+(defmethod extend! ((aspect aspect-maven)
+                    (spec   t)
+                    (output stream)
+                    (target (eql :command)))
+  (apply
+   (lambda (properties targets private-repository? settings-file global-settings-file)
+     (declare (ignore private-repository? settings-file global-settings-file))
+     (format output "mvn \\~%~
+                     ~{~2@T-D~A~^ \\~%~}~
+                     ~@[ \\~%~
+                       ~2@T~{~A~^ ~}~
+                     ~]"
+             properties targets))
+   (aspect-process-parameters aspect)))
+
 ;;; Setuptools aspect
 
 (deftype setuptools-option ()
@@ -248,6 +272,16 @@
                          :command (wrapped-shell-command (:aspect.setuptools)
                                     command)))
         (jenkins.api:builders job)))
+
+(defmethod extend! ((aspect aspect-setuptools)
+                    (spec   t)
+                    (output (eql 'string))
+                    (target (eql :command)))
+  (apply
+   (lambda (options command)
+     (declare (ignore options))
+     (wrapped-shell-command (:aspect.setuptools) command))
+   (aspect-process-parameters aspect)))
 
 (defmethod var:lookup ((thing aspect-setuptools)
                        (name  (eql :aspect.setuptools.option-lines))
