@@ -1,6 +1,6 @@
 ;;;; mixins.lisp --- Mixins classes used in the commands module.
 ;;;;
-;;;; Copyright (C) 2017, 2018, 2019 Jan Moringen
+;;;; Copyright (C) 2017, 2018, 2019, 2020 Jan Moringen
 ;;;;
 ;;;; Author: Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
 
@@ -60,6 +60,16 @@
   (:documentation
    "Adds an output-directory slot to command classes."))
 
+;;; `context-elements-cache-mixin'
+
+(defclass context-elements-cache-mixin ()
+  ((%context-elements :accessor %context-elements
+                      :initform '())))
+
+(defmethod context-elements :around ((command context-elements-cache-mixin))
+  (or (%context-elements command)
+      (setf (%context-elements command) (call-next-method))))
+
 ;;; `jenkins-access-mixin'
 
 (defclass jenkins-access-mixin ()
@@ -90,7 +100,8 @@
   (:documentation
    "Adds infrastructure for accessing a Jenkins server to command classes."))
 
-(defmethod command-execute :around ((command jenkins-access-mixin))
+(defmethod context-elements append ((command jenkins-access-mixin))
+  (log:debug "Computing context elements for ~A" command)
   (let+ (((&accessors-r/o base-uri username password api-token) command)
          (credentials (cond (api-token
                              (jenkins.api:make-token-credentials
@@ -100,8 +111,13 @@
                               username password))))
          (endpoint    (jenkins.api:make-endpoint
                        base-uri :credentials credentials)))
-    (jenkins.api:with-endpoint (endpoint)
-      (call-next-method))))
+    (list (lambda (next)
+            (log:debug "Applying context elements for ~A" command)
+            (jenkins.api:with-endpoint (endpoint)
+              (funcall next))))))
+
+(defmethod command-execute :around ((command jenkins-access-mixin))
+  (funcall (make-context-function command) #'call-next-method))
 
 (defmethod command-execute :before ((command jenkins-access-mixin))
   (as-phase (:verify-jenkins) (jenkins.api::verify-jenkins)))

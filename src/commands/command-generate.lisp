@@ -1,6 +1,6 @@
 ;;;; command-generate.lisp --- Generate Jenkins jobs for a distribution.
 ;;;;
-;;;; Copyright (C) 2017, 2018, 2019 Jan Moringen
+;;;; Copyright (C) 2017, 2018, 2019, 2020 Jan Moringen
 ;;;;
 ;;;; Author: Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
 
@@ -8,6 +8,7 @@
 
 (defclass generate (distribution-input-mixin
                     mode-mixin
+                    context-elements-cache-mixin
                     jenkins-access-mixin)
   ((delete-other?        :initarg  :delete-other?
                          :type     boolean
