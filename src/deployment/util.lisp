@@ -1,15 +1,16 @@
 ;;;; util.lisp --- Utilities provided by the target module.
 ;;;;
-;;;; Copyright (C) 2018, 2019 Jan Moringen
+;;;; Copyright (C) 2018, 2019, 2020 Jan Moringen
 ;;;;
 ;;;; Author: Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
 
 (cl:in-package #:build-generator.deployment)
 
-(defun job-full-name (thing)
+(defun job-full-name (thing &key (separator "@"))
   (let* ((version (model:parent thing))
          (project (model:parent (model:specification version))))
-    (format nil "~A@~A" (model:name project) (model:name version))))
+    (format nil "~A~A~A"
+            (model:name project) separator (model:name version))))
 
 (defun print-heading (stream title &key (width 80))
   (format stream "##~V,,,'#<~>##~@
